@@ -1,0 +1,135 @@
+Задача тест задание сделать возможность добавления любого обьявления (картинка с описание добавляется в базу)
+Так же:
+Создать JSON API для сайта объявлений
+Необходимо создать сервис для хранения и подачи объявлений. Объявления
+должны храниться в базе данных.
+
+env.
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=test
+DB_USERNAME=root
+DB_PASSWORD=
+
+Создание миграции:
+php artisan make:migration create_book_table
+
+Добавление полей в миграцию:
+    public function up()
+    {
+        Schema::create('book', function (Blueprint $table) {
+            $table->id();
+            $table->string('name', 200);
+            $table->string('opisanie', 30);
+            $table->integer('cena');
+            $table->date('date');
+            $table->string('name_img', 100);      
+            $table->timestamps();
+        });
+    }
+
+Запуск миграции:
+php artisan migrate
+
+Создание контроллера:
+
+php artisan make:controller BookController
+
+Добавление строк в контроллер:
+
+	public function book(){
+		return response()->json(Book::get(),200);
+	}
+
+	public function bookByid($id){
+		return response()->json(Book::find($id),200);
+	}
+
+	public function bookSave(Request $req){
+		$country = Book::create($req->all());
+		return response()->json($country,201);
+	}
+
+// главная станица
+	public function getIndex()
+	{
+		$books = Book::all();
+		return view('book.index', compact('books', $books));
+
+	} 
+// страница подробно
+	public function getSelect($id)
+	{
+		$book = Book::find($id);
+		return View::make('book.select')->with('book',$book);
+	}
+// страница добавить
+	public function getAdd()
+	{
+		return View::make('book.add');
+	}
+// добавление обьяления в базу
+	public function postAdd()
+	{
+		$data       = Input::all();
+		$validation = Validator::make($data, Book::$updValidation);
+		if ($validation->fails()) {
+			return Redirect::back()->withErrors($validation)->withInput();
+		}
+		$extension        = Input::file('name_img')->getClientOriginalExtension();
+		$destination_path = public_path() . '/storage/';
+		$file_name        = Str::random(40) . '.' . $extension;
+		Input::file('name_img')->move($destination_path, $file_name);
+		$data['name_img']    = $file_name;
+		$books       = book::create($data);
+		$books->save();
+		return Redirect::action('BookController@getIndex');
+	} 
+
+Создание модели:
+php artisan make:model Book
+
+Добавление строк в модель:
+
+	protected $table = "book";
+	public $timestamps = false;	
+	protected $fillable = [
+		'id',
+		'name',
+		'opisanie',
+		'cena',
+		'date',
+		'name_img',
+	];
+
+Добавление строк в routes\api:
+
+Route::get('book','BookController@book');
+вывод всех строк из базы http://blog/api/book
+Route::get('book/{id}','BookController@bookByid');
+вывод по одному ID http://blog/api/book/2
+Route::post('book', 'BookController@bookSave');
+добавление записи в базу 
+
+Добавление строк в routes\web:
+
+// Подробнее
+Route::get('book/select/{id}', 'BookController@getSelect');
+Route::get('book/index', 'BookController@getIndex');
+// Добавить
+Route::get('book/add', 'BookController@getAdd');
+Route::post('book/add', 'BookController@postAdd');
+// Поиск
+Route::get('/search', 'SearchController@getResults')->name('search.results');
+
+Проверка работы json_api программой Postman
+Проверка проека с помощью xampp v3.2.4
+
+
+
+
+
+
+
